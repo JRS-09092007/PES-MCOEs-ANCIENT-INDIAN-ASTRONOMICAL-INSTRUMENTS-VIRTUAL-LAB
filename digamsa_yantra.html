@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digamsa Yantra - True Astronomical Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* Right Side Panel */
+        .right-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100vh;
+            max-width: 100vw;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+
+        .panel-header { background: #1e293b; color: white; padding: 16px; text-align: center; }
+        
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
+        .tab-btn { flex: 1; padding: 10px 5px; font-size: 0.85rem; font-weight: 600; color: #475569; border: none; background: none; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: white; color: #0f172a; border-bottom: 2px solid #ef4444; }
+        
+        .tab-content { padding: 20px; overflow-y: auto; flex: 1; display: none; }
+        .tab-content.active { display: block; }
+
+        .control-group { background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        .control-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; }
+        .control-group input, .control-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; margin-bottom: 8px; }
+        
+        .btn { display: block; width: 100%; padding: 10px; background: #ef4444; color: white; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; margin-top: 8px; transition: background 0.2s; }
+        .btn:hover { background: #dc2626; }
+        .btn-outline { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+        .btn-outline:hover { background: #fef2f2; }
+
+        .reading-box { background: #1e293b; color: #10b981; padding: 12px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 1.5rem; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            .right-panel { width: 100vw; height: 50vh; top: auto; bottom: 0; box-shadow: 0 -5px 30px rgba(0,0,0,0.2); }
+            #canvas-container { height: 50vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="right-panel">
+        <div class="panel-header">
+            <h1 class="text-xl font-bold">Digamsa Yantra</h1>
+            <p class="text-xs text-slate-300">Live Astronomical Simulation</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab('sim')">Control</button>
+            <button class="tab-btn" onclick="openTab('about')">About</button>
+            <button class="tab-btn" onclick="openTab('math')">Math</button>
+            <button class="tab-btn" onclick="openTab('design')">Design</button>
+        </div>
+
+        <div id="sim" class="tab-content active">
+            
+            <div class="control-group">
+                <label>Observer Location</label>
+                <select id="observatorySelect" onchange="updateLocationFromPreset()">
+                    <option value="custom">Custom / Live Location</option>
+                    <option value="26.92,75.82" selected>Jaipur Jantar Mantar</option>
+                    <option value="23.17,75.76">Ujjain Jantar Mantar</option>
+                    <option value="28.62,77.20">Delhi Jantar Mantar</option>
+                    <option value="25.31,83.00">Varanasi Jantar Mantar</option>
+                </select>
+                <div class="flex gap-2">
+                    <input type="number" id="latInput" step="0.01" placeholder="Lat" value="26.92">
+                    <input type="number" id="lngInput" step="0.01" placeholder="Lng" value="75.82">
+                </div>
+                <button class="btn btn-outline text-sm" onclick="getLiveLocation()">📍 Use My Live Location</button>
+            </div>
+
+            <div class="control-group">
+                <label>Date & Time</label>
+                <input type="date" id="dateInput">
+                <input type="time" id="timeInput">
+                <button class="btn" id="animateDayBtn" onclick="toggleDayAnimation()">▶ Animate Full Day Loop</button>
+            </div>
+
+            <div class="control-group">
+                <label>Current Sun Azimuth Reading</label>
+                <div class="reading-box" id="azimuthReading">0.00°</div>
+                <p class="text-xs text-slate-500 mt-2 text-center">Virtual observer moves to this angle.</p>
+            </div>
+        </div>
+
+        <div id="about" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">The Digamsa Yantra</h3>
+            <p class="text-sm text-slate-600 mb-2">Built in the early 18th century by Maharaja Sawai Jai Singh II, this instrument calculates the <strong>Azimuth</strong> (horizontal angle) of the sun and stars.</p>
+            <p class="text-sm text-slate-600">The astronomer walks in the space between the inner and outer walls, aligning a thread from the central cross-wires to the celestial body, reading the angle on the graduated circular walls.</p>
+        </div>
+
+        <div id="math" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">Astronomical Principles</h3>
+            <p class="text-sm text-slate-600 mb-2">The simulation uses standard solar position equations:</p>
+            <ul class="text-xs text-slate-600 list-disc pl-4 space-y-1">
+                <li>Calculates Day of Year (N)</li>
+                <li>Derives Solar Declination ($\delta$)</li>
+                <li>Calculates Local Hour Angle (H) based on Longitude and Time</li>
+                <li>Derives Solar Altitude ($\alpha$) and Azimuth (A) using spherical trigonometry based on observer Latitude.</li>
+            </ul>
+        </div>
+
+        <div id="design" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">Structural Accuracy</h3>
+            <ul class="text-xs text-slate-600 list-disc pl-4 space-y-2">
+                <li><strong>Central Pillar:</strong> Holds the center node.</li>
+                <li><strong>Inner Wall:</strong> Matching height to pillar.</li>
+                <li><strong>Outer Wall:</strong> Taller, anchors the North-South and East-West crosswires.</li>
+                <li><strong>Entrances:</strong> 4 cardinal cutouts allowing the observer to enter.</li>
+                <li><strong>Virtual Observer:</strong> The blue figure aligns the measurement thread.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // --- UI Logic ---
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Initialize Date/Time UI
+        const now = new Date();
+        document.getElementById('dateInput').valueAsDate = now;
+        document.getElementById('timeInput').value = now.toTimeString().slice(0,5);
+
+        // --- 3D SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        
+        // Adjust camera to account for right panel
+        const aspect = (window.innerWidth - (window.innerWidth > 768 ? 400 : 0)) / window.innerHeight;
+        const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+        camera.position.set(15, 12, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth - (window.innerWidth > 768 ? 400 : 0), window.innerHeight - (window.innerWidth <= 768 ? window.innerHeight/2 : 0));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.target.set(0, 1.5, 0);
+
+        // Lighting (Dynamic Sun)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffee, 1.2);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 100;
+        sunLight.shadow.camera.left = -15;
+        sunLight.shadow.camera.right = 15;
+        sunLight.shadow.camera.top = 15;
+        sunLight.shadow.camera.bottom = -15;
+        scene.add(sunLight);
+
+        // Ground
+        const grid = new THREE.GridHelper(50, 50, 0x000000, 0x000000);
+        grid.material.opacity = 0.1; grid.material.transparent = true;
+        scene.add(grid);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0xe0eac7 }));
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // --- YANTRA CONSTRUCTION ---
+        const yantraGroup = new THREE.Group();
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0xc4625b });
+        const scaleMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa });
+        const wireMat = new THREE.LineBasicMaterial({ color: 0x222222, linewidth: 2 });
+        const threadMat = new THREE.LineBasicMaterial({ color: 0xeab308 });
+
+        // Pillar
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 1.5, 32), stoneMat);
+        pillar.position.y = 0.75; pillar.castShadow = true; pillar.receiveShadow = true;
+        yantraGroup.add(pillar);
+        
+        // Wall Generator
+        function createBrokenWall(innerR, outerR, height, gapDeg) {
+            const group = new THREE.Group();
+            const gapRad = gapDeg * Math.PI / 180;
+            const segmentRad = (Math.PI / 2) - gapRad;
+            for (let i = 0; i < 4; i++) {
+                const startAngle = i * (Math.PI / 2) + gapRad / 2;
+                const shape = new THREE.Shape();
+                shape.absarc(0, 0, outerR, startAngle, startAngle + segmentRad, false);
+                shape.lineTo(innerR * Math.cos(startAngle + segmentRad), innerR * Math.sin(startAngle + segmentRad));
+                shape.absarc(0, 0, innerR, startAngle + segmentRad, startAngle, true);
+                
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 32 });
+                geo.rotateX(Math.PI / 2); geo.translate(0, height, 0);
+                const mesh = new THREE.Mesh(geo, stoneMat);
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                group.add(mesh);
+
+                const topGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+                topGeo.rotateX(Math.PI / 2); topGeo.translate(0, height + 0.05, 0);
+                const topMesh = new THREE.Mesh(topGeo, scaleMat);
+                topMesh.receiveShadow = true;
+                group.add(topMesh);
+            }
+            return group;
+        }
+
+        yantraGroup.add(createBrokenWall(2.5, 3.2, 1.5, 12)); // Inner
+        yantraGroup.add(createBrokenWall(5.5, 6.2, 3.0, 8));  // Outer
+
+        // Crosswires
+        const wireH = 3.08;
+        yantraGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-6.2, wireH, 0), new THREE.Vector3(6.2, wireH, 0)]), wireMat));
+        yantraGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, wireH, -6.2), new THREE.Vector3(0, wireH, 6.2)]), wireMat));
+        
+        // Virtual Observer
+        const observerGroup = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16), new THREE.MeshStandardMaterial({color: 0x3b82f6}));
+        body.position.y = 0.6; body.castShadow = true;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({color: 0xfca5a5}));
+        head.position.y = 1.4; head.castShadow = true;
+        observerGroup.add(body); observerGroup.add(head);
+        yantraGroup.add(observerGroup);
+
+        // Thread
+        const threadGeo = new THREE.BufferGeometry();
+        const threadPositions = new Float32Array(2 * 3); // Center to Observer
+        threadGeo.setAttribute('position', new THREE.BufferAttribute(threadPositions, 3));
+        const threadLine = new THREE.Line(threadGeo, threadMat);
+        yantraGroup.add(threadLine);
+
+        scene.add(yantraGroup);
+
+        // --- ASTRONOMY MATH ENGINE ---
+        function calculateSunPosition(date, lat, lng) {
+            // Simplified Solar Position Algorithm
+            const start = new Date(date.getFullYear(), 0, 0);
+            const diff = date - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+
+            const b = (2 * Math.PI / 365) * (dayOfYear - 81);
+            const equationOfTime = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
+
+            const lst = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+            const solarTime = lst + (lng / 15) - (date.getTimezoneOffset() / 60) + (equationOfTime / 60);
+            
+            let hourAngle = 15 * (solarTime - 12);
+            const declination = 23.45 * Math.sin((360 / 365) * (dayOfYear - 81) * Math.PI / 180);
+
+            const latRad = lat * Math.PI / 180;
+            const decRad = declination * Math.PI / 180;
+            const haRad = hourAngle * Math.PI / 180;
+
+            // Altitude
+            const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
+            const altitude = Math.asin(sinAlt);
+
+            // Azimuth
+            const cosAz = (Math.sin(decRad) - Math.sin(latRad) * sinAlt) / (Math.cos(latRad) * Math.cos(altitude));
+            let azimuthRad = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+            
+            if (Math.sin(haRad) > 0) azimuthRad = 2 * Math.PI - azimuthRad;
+
+            return {
+                azimuth: azimuthRad * 180 / Math.PI,
+                altitude: altitude * 180 / Math.PI
+            };
+        }
+
+        // --- UPDATE LOGIC ---
+        function updateSimulation() {
+            const dateVal = document.getElementById('dateInput').value;
+            const timeVal = document.getElementById('timeInput').value;
+            const lat = parseFloat(document.getElementById('latInput').value);
+            const lng = parseFloat(document.getElementById('lngInput').value);
+
+            if(!dateVal || !timeVal || isNaN(lat) || isNaN(lng)) return;
+
+            const simDate = new Date(`${dateVal}T${timeVal}`);
+            const sunPos = calculateSunPosition(simDate, lat, lng);
+
+            // Update UI
+            document.getElementById('azimuthReading').innerText = sunPos.azimuth.toFixed(2) + '°';
+
+            // Update Sun Light in 3D
+            const azRad = sunPos.azimuth * Math.PI / 180;
+            const altRad = sunPos.altitude * Math.PI / 180;
+            const distance = 40;
+            
+            // Note: In Three.js, -Z is North, +X is East. 
+            // Azimuth is measured from North (0) towards East (90).
+            const sunX = distance * Math.cos(altRad) * Math.sin(azRad);
+            const sunZ = distance * Math.cos(altRad) * -Math.cos(azRad);
+            const sunY = distance * Math.sin(altRad);
+            sunLight.position.set(sunX, sunY, sunZ);
+
+            // Update Virtual Observer & Thread
+            // Observer stands in the walkway (radius ~4.35)
+            const obsRadius = 4.35;
+            // Observer looks TOWARDS the center to align with the sun behind them, 
+            // or looks AT the sun from the opposite side. Usually, you read the shadow or align visually.
+            // Let's place observer on the exact azimuth angle on the walkway.
+            observerGroup.position.set(
+                Math.sin(azRad) * obsRadius,
+                0,
+                -Math.cos(azRad) * obsRadius
+            );
+            observerGroup.lookAt(0, 1.5, 0); // Look at center
+
+            // Thread connects Center Crosswire (0, 3.08, 0) to Observer hands
+            const positions = threadLine.geometry.attributes.position.array;
+            positions[0] = 0; positions[1] = wireH; positions[2] = 0; // Center
+            positions[3] = observerGroup.position.x; positions[4] = 1.2; positions[5] = observerGroup.position.z; // Observer
+            threadLine.geometry.attributes.position.needsUpdate = true;
+
+            // Dim light if sun is below horizon
+            sunLight.intensity = sunPos.altitude > 0 ? 1.2 : 0.1;
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('dateInput').addEventListener('change', updateSimulation);
+        document.getElementById('timeInput').addEventListener('change', updateSimulation);
+        document.getElementById('latInput').addEventListener('input', updateSimulation);
+        document.getElementById('lngInput').addEventListener('input', updateSimulation);
+
+        function updateLocationFromPreset() {
+            const val = document.getElementById('observatorySelect').value;
+            if (val !== 'custom') {
+                const [lat, lng] = val.split(',');
+                document.getElementById('latInput').value = lat;
+                document.getElementById('lngInput').value = lng;
+                updateSimulation();
+            }
+        }
+
+        function getLiveLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    document.getElementById('latInput').value = pos.coords.latitude.toFixed(2);
+                    document.getElementById('lngInput').value = pos.coords.longitude.toFixed(2);
+                    document.getElementById('observatorySelect').value = 'custom';
+                    updateSimulation();
+                }, err => alert("Location access denied or unavailable."));
+            } else {
+                alert("Geolocation not supported by this browser.");
+            }
+        }
+
+        // --- DAY ANIMATION LOOP ---
+        let isAnimatingDay = false;
+        let animSpeed = 5; // minutes per frame
+        
+        function toggleDayAnimation() {
+            isAnimatingDay = !isAnimatingDay;
+            const btn = document.getElementById('animateDayBtn');
+            btn.innerText = isAnimatingDay ? '⏹ Stop Animation' : '▶ Animate Full Day Loop';
+            btn.className = isAnimatingDay ? 'btn bg-slate-800' : 'btn';
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAnimatingDay) {
+                const timeInput = document.getElementById('timeInput');
+                let [hours, minutes] = timeInput.value.split(':').map(Number);
+                minutes += animSpeed;
+                if (minutes >= 60) { minutes -= 60; hours++; }
+                if (hours >= 24) { hours = 0; } // Loop day
+                
+                timeInput.value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                updateSimulation();
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Window Resize Logic
+        window.addEventListener('resize', () => {
+            const isMobile = window.innerWidth <= 768;
+            const w = isMobile ? window.innerWidth : window.innerWidth - 400;
+            const h = isMobile ? window.innerHeight / 2 : window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        // Start
+        updateSimulation();
+        animate();
+    </script>
+</body>
+</html>

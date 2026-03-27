@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shasthamsa Yantra Simulator - 3D Astronomical Instrument</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ea580c; }
+
+        .panel-glass {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        /* Input Range Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+        
+        .tab-btn.active {
+            color: #f97316;
+            border-bottom: 2px solid #f97316;
+        }
+        
+        /* Sun Icon */
+        .sun-icon {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #fbbf24;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #fbbf24;
+        }
+    </style>
+</head>
+<body class="antialiased h-screen w-screen flex overflow-hidden">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Mobile Panel Toggle -->
+    <button id="mobile-toggle" class="absolute top-4 right-4 z-50 md:hidden bg-gray-800 text-orange-500 p-2 rounded-lg border border-orange-500 shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+
+    <!-- Overlay Info (Top Left) -->
+    <div class="absolute top-4 left-4 z-10 pointer-events-none">
+        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wider shadow-black drop-shadow-md">
+            SHASTHAMSA <span class="text-orange-500">YANTRA</span>
+        </h1>
+        <p class="text-gray-300 text-sm md:text-base mt-1 drop-shadow-md">High-Precision Altitude & Zenith Simulator</p>
+    </div>
+
+    <!-- Right Side Panel -->
+    <div id="side-panel" class="panel-glass absolute right-0 top-0 h-full w-full md:w-96 z-40 transform transition-transform duration-300 translate-x-full md:translate-x-0 flex flex-col shadow-2xl">
+        
+        <!-- Mobile Header -->
+        <div class="flex justify-between items-center p-4 border-b border-gray-700 md:hidden">
+            <h2 class="text-xl font-bold text-orange-500">Menu</h2>
+            <button id="close-panel" class="text-gray-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-700 px-2 mt-2">
+            <button class="tab-btn active flex-1 py-3 text-sm font-medium text-gray-400 hover:text-orange-400 transition-colors" data-tab="controls">Controls</button>
+            <button class="tab-btn flex-1 py-3 text-sm font-medium text-gray-400 hover:text-orange-400 transition-colors" data-tab="math">Math & Data</button>
+            <button class="tab-btn flex-1 py-3 text-sm font-medium text-gray-400 hover:text-orange-400 transition-colors" data-tab="about">About</button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
+            
+            <!-- CONTROLS TAB -->
+            <div id="tab-controls" class="tab-content block space-y-6">
+                <!-- Location -->
+                <div class="space-y-3 bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h3 class="text-orange-500 font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
+                        Observatory Location
+                    </h3>
+                    <select id="location-preset" class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-md p-2 focus:ring-orange-500 focus:border-orange-500">
+                        <option value="custom">Custom Location</option>
+                        <option value="jaipur" selected>Jaipur Jantar Mantar (26.92° N)</option>
+                        <option value="delhi">Delhi Jantar Mantar (28.63° N)</option>
+                        <option value="ujjain">Ujjain Vedh Shala (23.18° N)</option>
+                        <option value="varanasi">Varanasi Man Mandir (25.31° N)</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div>
+                            <label class="text-xs text-gray-400">Latitude (°N)</label>
+                            <input type="number" id="lat-input" value="26.9247" step="0.01" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Longitude (°E)</label>
+                            <input type="number" id="lon-input" value="75.8246" step="0.01" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1.5 text-sm">
+                        </div>
+                    </div>
+                    <button id="btn-geolocation" class="w-full mt-2 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded transition">
+                        Use My Live Location
+                    </button>
+                </div>
+
+                <!-- Time & Date -->
+                <div class="space-y-3 bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h3 class="text-orange-500 font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                        Date & Time
+                    </h3>
+                    <div>
+                        <label class="text-xs text-gray-400">Date</label>
+                        <input type="date" id="date-input" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1.5 text-sm text-white">
+                    </div>
+                    <div class="pt-2">
+                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                            <span>00:00</span>
+                            <span id="time-display" class="font-bold text-orange-400 text-sm">12:00</span>
+                            <span>24:00</span>
+                        </div>
+                        <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button id="btn-play" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-md font-semibold transition flex justify-center items-center gap-2 shadow-lg shadow-orange-900/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                            Animate Day
+                        </button>
+                        <button id="btn-now" class="bg-gray-700 hover:bg-gray-600 px-3 rounded-md text-sm transition">Now</button>
+                    </div>
+                </div>
+
+                <!-- Instrument Settings -->
+                <div class="space-y-3 bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h3 class="text-orange-500 font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
+                        Instrument Options
+                    </h3>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Precision Markings (1/6°)</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-precision" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </label>
+                    </div>
+                    <button id="btn-reset-cam" class="w-full text-sm bg-gray-700 hover:bg-gray-600 text-white py-2 rounded transition mt-2">
+                        Reset Camera View
+                    </button>
+                </div>
+            </div>
+
+            <!-- MATH & DATA TAB -->
+            <div id="tab-math" class="tab-content hidden space-y-4">
+                
+                <div class="bg-gray-800 border-l-4 border-orange-500 p-4 rounded-r-lg shadow-lg">
+                    <div class="text-xs text-gray-400 uppercase font-semibold tracking-wider">Observed Altitude (α)</div>
+                    <div class="text-4xl font-mono text-white mt-1" id="data-altitude">00.00°</div>
+                    <div class="text-sm text-orange-400 mt-1 font-mono" id="data-alt-dms">00° 00' 00"</div>
+                </div>
+
+                <div class="bg-gray-800 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-lg">
+                    <div class="text-xs text-gray-400 uppercase font-semibold tracking-wider">Zenith Distance (z = 90° - α)</div>
+                    <div class="text-3xl font-mono text-white mt-1" id="data-zenith">00.00°</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                        <div class="text-xs text-gray-400">Solar Declination (δ)</div>
+                        <div class="text-lg font-mono text-white" id="data-declination">0.00°</div>
+                    </div>
+                    <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                        <div class="text-xs text-gray-400">Sun Azimuth</div>
+                        <div class="text-lg font-mono text-white" id="data-azimuth">0.00°</div>
+                    </div>
+                </div>
+
+                <!-- Shasthamsa specific precision reading -->
+                <div class="bg-gray-900 border border-orange-500/50 p-4 rounded-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-10">
+                        <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor" class="text-orange-500"><path d="M12 2L2 22h20L12 2z"/></svg>
+                    </div>
+                    <h3 class="text-orange-500 font-bold mb-2 border-b border-gray-700 pb-1">Shasthamsa Reading</h3>
+                    <p class="text-xs text-gray-400 mb-2">1 Shasthamsa = 1/6th of a degree (10 arcminutes)</p>
+                    <div class="flex items-end gap-2">
+                        <span class="text-3xl font-mono text-white" id="data-shasthamsa">0.0</span>
+                        <span class="text-sm text-orange-400 mb-1">units</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2 font-mono">Formula: Altitude × 6</div>
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-sm text-gray-300">
+                    <p class="font-semibold text-white mb-1">Mathematical Model:</p>
+                    <p class="font-mono text-xs text-orange-300">sin(α) = sin(φ)sin(δ) + cos(φ)cos(δ)cos(H)</p>
+                    <ul class="list-disc pl-4 mt-2 text-xs space-y-1">
+                        <li><strong>α</strong>: Altitude</li>
+                        <li><strong>φ</strong>: Latitude (<span id="math-phi">0</span>°)</li>
+                        <li><strong>δ</strong>: Declination</li>
+                        <li><strong>H</strong>: Hour Angle</li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- ABOUT TAB -->
+            <div id="tab-about" class="tab-content hidden space-y-4 text-sm text-gray-300 leading-relaxed">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Jantar_Mantar_Jaipur_2013.jpg/800px-Jantar_Mantar_Jaipur_2013.jpg" alt="Jantar Mantar" class="w-full h-32 object-cover rounded-lg border border-gray-700 opacity-80" onerror="this.style.display='none'">
+                
+                <h3 class="text-lg font-bold text-white">What is the Shasthamsa Yantra?</h3>
+                <p>The <strong>Shasthamsa Yantra</strong> is a traditional Indian astronomical instrument (Yantra) designed to measure the zenith distance and altitude of the Sun with extreme precision.</p>
+                
+                <div class="bg-gray-800 p-3 rounded border-l-2 border-orange-500">
+                    <strong class="text-orange-400">"Shasthamsa"</strong> literally translates to "sixtieth part", referring to a 60-degree arc, making it conceptually similar to a classical <strong>Sextant</strong>.
+                </div>
+
+                <h4 class="font-semibold text-white mt-4">How it Works:</h4>
+                <p>In its grand architectural form (like at Jaipur), it consists of a 60-degree graduated arc built in the meridian plane inside a dark chamber. Sunlight enters through a pinhole, casting a precise spot on the finely divided arc.</p>
+                <p>This 3D simulator models the geometric principle: an arc divided into very fine units (1/6th of a degree) with an alignment arm (representing the sightline or light beam) pointing directly at the celestial object.</p>
+
+                <h4 class="font-semibold text-white mt-4">Measurements:</h4>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Altitude (α):</strong> Angle of the Sun above the horizon.</li>
+                    <li><strong>Zenith Distance (z):</strong> Angle from the directly overhead point (zenith). <span class="font-mono text-xs text-orange-400">z = 90° - α</span></li>
+                    <li><strong>Precision:</strong> The scale is divided such that 1 unit = 10 arcminutes (1/6°).</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. UI & STATE MANAGEMENT
+        // ==========================================
+        const state = {
+            lat: 26.9247, // Jaipur
+            lon: 75.8246,
+            date: new Date(),
+            timeHours: 12.0,
+            isPlaying: false,
+            animSpeed: 2.0, // hours per second in animation
+            precisionMode: false,
+            sunAlt: 0,
+            sunAz: 0,
+            sunDec: 0
+        };
+
+        // DOM Elements
+        const ui = {
+            tabs: document.querySelectorAll('.tab-btn'),
+            contents: document.querySelectorAll('.tab-content'),
+            mobileToggle: document.getElementById('mobile-toggle'),
+            sidePanel: document.getElementById('side-panel'),
+            closePanel: document.getElementById('close-panel'),
+            
+            // Inputs
+            latInput: document.getElementById('lat-input'),
+            lonInput: document.getElementById('lon-input'),
+            locPreset: document.getElementById('location-preset'),
+            btnGeo: document.getElementById('btn-geolocation'),
+            dateInput: document.getElementById('date-input'),
+            timeSlider: document.getElementById('time-slider'),
+            timeDisplay: document.getElementById('time-display'),
+            btnPlay: document.getElementById('btn-play'),
+            btnNow: document.getElementById('btn-now'),
+            togglePrecision: document.getElementById('toggle-precision'),
+            btnResetCam: document.getElementById('btn-reset-cam'),
+            
+            // Data displays
+            dataAltitude: document.getElementById('data-altitude'),
+            dataAltDms: document.getElementById('data-alt-dms'),
+            dataZenith: document.getElementById('data-zenith'),
+            dataDeclination: document.getElementById('data-declination'),
+            dataAzimuth: document.getElementById('data-azimuth'),
+            dataShasthamsa: document.getElementById('data-shasthamsa'),
+            mathPhi: document.getElementById('math-phi')
+        };
+
+        // Initialize Date Input
+        ui.dateInput.valueAsDate = state.date;
+
+        // Tab Switching Logic
+        ui.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                ui.tabs.forEach(t => t.classList.remove('active'));
+                ui.contents.forEach(c => c.classList.add('hidden'));
+                
+                tab.classList.add('active');
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.remove('hidden');
+            });
+        });
+
+        // Mobile Panel Toggle
+        const togglePanel = () => {
+            ui.sidePanel.classList.toggle('translate-x-full');
+        };
+        ui.mobileToggle.addEventListener('click', togglePanel);
+        ui.closePanel.addEventListener('click', togglePanel);
+
+        // Location Inputs
+        ui.locPreset.addEventListener('change', (e) => {
+            const presets = {
+                jaipur: { lat: 26.9247, lon: 75.8246 },
+                delhi: { lat: 28.6315, lon: 77.2167 },
+                ujjain: { lat: 23.1820, lon: 75.7683 },
+                varanasi: { lat: 25.3109, lon: 83.0076 }
+            };
+            if(presets[e.target.value]) {
+                state.lat = presets[e.target.value].lat;
+                state.lon = presets[e.target.value].lon;
+                ui.latInput.value = state.lat;
+                ui.lonInput.value = state.lon;
+                updateAstronomy();
+            }
+        });
+
+        ui.latInput.addEventListener('input', (e) => { state.lat = parseFloat(e.target.value) || 0; ui.locPreset.value = 'custom'; updateAstronomy(); });
+        ui.lonInput.addEventListener('input', (e) => { state.lon = parseFloat(e.target.value) || 0; ui.locPreset.value = 'custom'; updateAstronomy(); });
+
+        // Geolocation
+        ui.btnGeo.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                ui.btnGeo.innerText = "Locating...";
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        state.lat = pos.coords.latitude;
+                        state.lon = pos.coords.longitude;
+                        ui.latInput.value = state.lat.toFixed(4);
+                        ui.lonInput.value = state.lon.toFixed(4);
+                        ui.locPreset.value = 'custom';
+                        ui.btnGeo.innerText = "Use My Live Location";
+                        updateAstronomy();
+                    },
+                    (err) => {
+                        alert("Geolocation failed: " + err.message);
+                        ui.btnGeo.innerText = "Use My Live Location";
+                    }
+                );
+            }
+        });
+
+        // Time and Date Inputs
+        const formatTime = (hours) => {
+            const h = Math.floor(hours);
+            const m = Math.floor((hours - h) * 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        };
+
+        ui.timeSlider.addEventListener('input', (e) => {
+            state.timeHours = parseFloat(e.target.value);
+            ui.timeDisplay.innerText = formatTime(state.timeHours);
+            updateAstronomy();
+        });
+
+        ui.dateInput.addEventListener('change', (e) => {
+            state.date = new Date(e.target.value);
+            updateAstronomy();
+        });
+
+        // Play / Pause Animation
+        ui.btnPlay.addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            if(state.isPlaying) {
+                ui.btnPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg> Pause`;
+                ui.btnPlay.classList.replace('bg-orange-600', 'bg-red-600');
+                ui.btnPlay.classList.replace('hover:bg-orange-500', 'hover:bg-red-500');
+            } else {
+                ui.btnPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg> Animate Day`;
+                ui.btnPlay.classList.replace('bg-red-600', 'bg-orange-600');
+                ui.btnPlay.classList.replace('hover:bg-red-500', 'hover:bg-orange-500');
+            }
+        });
+
+        // Now button
+        ui.btnNow.addEventListener('click', () => {
+            const now = new Date();
+            state.date = now;
+            ui.dateInput.valueAsDate = now;
+            state.timeHours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+            ui.timeSlider.value = state.timeHours;
+            ui.timeDisplay.innerText = formatTime(state.timeHours);
+            updateAstronomy();
+        });
+
+        // Precision Mode
+        ui.togglePrecision.addEventListener('change', (e) => {
+            state.precisionMode = e.target.checked;
+            buildTicks(); // Rebuild 3D ticks
+        });
+
+
+        // ==========================================
+        // 2. ASTRONOMY MATH
+        // ==========================================
+        function getDayOfYear(date) {
+            const start = new Date(date.getFullYear(), 0, 0);
+            const diff = date - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            return Math.floor(diff / oneDay);
+        }
+
+        function calculateAstronomy() {
+            // Simplified celestial mechanics for visualization
+            const d = getDayOfYear(state.date);
+            const latRad = state.lat * Math.PI / 180;
+            
+            // Solar Declination (approx)
+            // δ = 23.45° * sin(360/365 * (d - 81))
+            const decDeg = 23.45 * Math.sin((2 * Math.PI / 365) * (d - 81));
+            const decRad = decDeg * Math.PI / 180;
+            state.sunDec = decDeg;
+
+            // Hour Angle (H)
+            // Solar noon approx 12:00 for simplicity in this visualizer
+            // H = (Local Time - 12) * 15°
+            const H_deg = (state.timeHours - 12) * 15;
+            const H_rad = H_deg * Math.PI / 180;
+
+            // Altitude (α)
+            // sin(α) = sin(φ)sin(δ) + cos(φ)cos(δ)cos(H)
+            const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(H_rad);
+            const altRad = Math.asin(sinAlt);
+            state.sunAlt = altRad * 180 / Math.PI;
+
+            // Azimuth (Az)
+            // cos(Az) = (sin(δ) - sin(α)sin(φ)) / (cos(α)cos(φ))
+            let cosAz = (Math.sin(decRad) - Math.sin(altRad) * Math.sin(latRad)) / (Math.cos(altRad) * Math.cos(latRad));
+            // clamp to avoid NaN from floating point precision
+            cosAz = Math.max(-1, Math.min(1, cosAz)); 
+            
+            let azRad = Math.acos(cosAz);
+            // If H > 0 (afternoon), true Az is 360 - Az (measured from North)
+            if (H_deg > 0) {
+                azRad = 2 * Math.PI - azRad;
+            }
+            state.sunAz = azRad * 180 / Math.PI;
+        }
+
+        function decimalToDMS(deg) {
+            const d = Math.floor(deg);
+            const minFloat = (deg - d) * 60;
+            const m = Math.floor(minFloat);
+            const s = Math.round((minFloat - m) * 60);
+            return `${d}° ${m.toString().padStart(2, '0')}' ${s.toString().padStart(2, '0')}"`;
+        }
+
+        function updateUI() {
+            // Only update data if sun is above horizon, else show 0
+            const displayAlt = Math.max(0, state.sunAlt);
+            
+            ui.dataAltitude.innerText = displayAlt.toFixed(2) + "°";
+            ui.dataAltDms.innerText = displayAlt > 0 ? decimalToDMS(displayAlt) : "Below Horizon";
+            
+            const zenith = displayAlt > 0 ? (90 - displayAlt) : 90;
+            ui.dataZenith.innerText = zenith.toFixed(2) + "°";
+            
+            ui.dataDeclination.innerText = state.sunDec.toFixed(2) + "°";
+            ui.dataAzimuth.innerText = state.sunAz.toFixed(2) + "°";
+            ui.mathPhi.innerText = state.lat.toFixed(2);
+
+            // Shasthamsa = 1/6th of a degree. So 6 units per degree.
+            const shasthamsa = displayAlt * 6;
+            ui.dataShasthamsa.innerText = shasthamsa.toFixed(1);
+            
+            // Highlight precision reading if precision mode is on
+            if(state.precisionMode) {
+                ui.dataShasthamsa.classList.add('text-orange-400', 'font-bold');
+            } else {
+                ui.dataShasthamsa.classList.remove('text-orange-400', 'font-bold');
+            }
+        }
+
+
+        // ==========================================
+        // 3. THREE.JS VISUALIZATION
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a); // Tailwind slate-900
+        scene.fog = new THREE.Fog(0x0f172a, 30, 150);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 10, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1; // allow slightly below ground
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+
+        ui.btnResetCam.addEventListener('click', () => {
+            camera.position.set(15, 10, 20);
+            controls.target.set(0, 5, 0);
+        });
+
+        // --- Lighting ---
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffaa44, 1.5);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 150;
+        sunLight.shadow.camera.left = -20;
+        sunLight.shadow.camera.right = 20;
+        sunLight.shadow.camera.top = 20;
+        sunLight.shadow.camera.bottom = -20;
+        scene.add(sunLight);
+
+        // --- Environment ---
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            color: 0x1e293b, 
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const grid = new THREE.GridHelper(50, 50, 0x334155, 0x1e293b);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        // Compass Rose (N, S, E, W markers)
+        const createTextSprite = (text, color) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.font = 'bold 32px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 32, 32);
+            const texture = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(3, 3, 1);
+            return sprite;
+        }
+        
+        const north = createTextSprite('N', '#ef4444'); north.position.set(0, 0.5, -15); scene.add(north);
+        const south = createTextSprite('S', '#94a3b8'); south.position.set(0, 0.5, 15); scene.add(south);
+        const east = createTextSprite('E', '#94a3b8'); east.position.set(15, 0.5, 0); scene.add(east);
+        const west = createTextSprite('W', '#94a3b8'); west.position.set(-15, 0.5, 0); scene.add(west);
+
+
+        // --- Yantra Instrument Construction ---
+        const instrumentGroup = new THREE.Group();
+        scene.add(instrumentGroup);
+
+        // Materials
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.9 });
+        const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xb5a642, metalness: 0.8, roughness: 0.2 });
+        const highlightMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+
+        // 1. Pedestal Base
+        const baseGeo = new THREE.CylinderGeometry(4, 4.5, 1, 32);
+        const baseMesh = new THREE.Mesh(baseGeo, stoneMat);
+        baseMesh.position.y = 0.5;
+        baseMesh.castShadow = true;
+        baseMesh.receiveShadow = true;
+        scene.add(baseMesh); // Fixed to ground
+
+        // Rotating Part (Azimuth Tracking Mount)
+        const trackerBase = new THREE.Group();
+        trackerBase.position.y = 1;
+        instrumentGroup.add(trackerBase);
+
+        const swivelBase = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.5, 32), darkStoneMat);
+        swivelBase.position.y = 0.25;
+        swivelBase.castShadow = true;
+        trackerBase.add(swivelBase);
+
+        // Vertical Support Structure
+        const pillarGeo = new THREE.BoxGeometry(1, 6, 1);
+        const pillar1 = new THREE.Mesh(pillarGeo, darkStoneMat);
+        pillar1.position.set(0, 3.5, -1);
+        pillar1.castShadow = true;
+        trackerBase.add(pillar1);
+
+        // 2. The Arc (Shasthamsa - usually 60 degrees, we model 90 for full functionality)
+        const arcRadius = 6;
+        const arcGroup = new THREE.Group();
+        arcGroup.position.set(0, 6.5, 0); // Pivot point
+        trackerBase.add(arcGroup);
+
+        // Arc Geometry (A quarter torus)
+        // Three.js Torus: radius, tube, radialSegments, tubularSegments, arc
+        const torusGeo = new THREE.TorusGeometry(arcRadius, 0.3, 16, 64, Math.PI / 2);
+        const arcMesh = new THREE.Mesh(torusGeo, stoneMat);
+        // Align arc so 0 is horizontal, 90 is vertical down
+        arcMesh.rotation.y = Math.PI / 2; // Face X axis
+        arcMesh.rotation.z = -Math.PI / 2; // Start from bottom
+        arcMesh.castShadow = true;
+        arcGroup.add(arcMesh);
+
+        // Inner brass plate
+        const plateGeo = new THREE.CylinderGeometry(arcRadius - 0.1, arcRadius - 0.1, 0.4, 64, 1, false, 0, Math.PI/2);
+        const plateMesh = new THREE.Mesh(plateGeo, brassMat);
+        plateMesh.rotation.y = Math.PI / 2;
+        plateMesh.rotation.x = Math.PI / 2;
+        arcGroup.add(plateMesh);
+
+        // Ticks Group
+        let ticksGroup = new THREE.Group();
+        arcGroup.add(ticksGroup);
+
+        function buildTicks() {
+            // Remove old ticks
+            arcGroup.remove(ticksGroup);
+            ticksGroup = new THREE.Group();
+            
+            const numTicks = state.precisionMode ? 90 * 6 : 90; // 6 ticks per degree if precision mode (Shasthamsa)
+            
+            for(let i = 0; i <= numTicks; i++) {
+                let angleDeg = state.precisionMode ? (i / 6) : i;
+                if(angleDeg > 90) break;
+                
+                const angleRad = angleDeg * Math.PI / 180;
+                
+                const isMajor = angleDeg % 10 === 0;
+                const isMedium = angleDeg % 1 === 0;
+                
+                let tickLength = 0.6;
+                let tickThickness = 0.05;
+                let mat = darkStoneMat;
+                
+                if (isMajor) {
+                    tickLength = 0.8;
+                    tickThickness = 0.1;
+                    mat = highlightMat;
+                } else if (isMedium) {
+                    tickLength = 0.5;
+                } else {
+                    tickLength = 0.3;
+                    tickThickness = 0.02;
+                }
+
+                const tickGeo = new THREE.BoxGeometry(tickThickness, tickLength, 0.05);
+                const tick = new THREE.Mesh(tickGeo, mat);
+                
+                // Position along arc (radius 6)
+                // In local coords, arc is in Y-Z plane. Z is forward, Y is down.
+                // At 0 deg: Y = -6, Z = 0
+                // At 90 deg: Y = 0, Z = 6
+                const y = -arcRadius * Math.cos(angleRad);
+                const z = arcRadius * Math.sin(angleRad);
+                
+                tick.position.set(0, y, z);
+                tick.rotation.x = angleRad;
+                
+                ticksGroup.add(tick);
+            }
+            arcGroup.add(ticksGroup);
+        }
+        buildTicks(); // Initial build
+
+        // 3. Pointer Arm (Sightline mechanism)
+        const armGroup = new THREE.Group();
+        arcGroup.add(armGroup); // Pivot at center of arc
+
+        const armGeo = new THREE.CylinderGeometry(0.05, 0.1, arcRadius + 1, 16);
+        // Shift geometry so origin is at end
+        armGeo.translate(0, -(arcRadius + 1)/2, 0); 
+        const armMesh = new THREE.Mesh(armGeo, brassMat);
+        armMesh.castShadow = true;
+        armGroup.add(armMesh);
+
+        // Pointer tip/sight
+        const sightGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        const sightMesh = new THREE.Mesh(sightGeo, darkStoneMat);
+        sightMesh.position.y = -arcRadius;
+        armGroup.add(sightMesh);
+
+        // A visual "light beam" extending to sun
+        const beamGeo = new THREE.CylinderGeometry(0.02, 0.02, 50, 8);
+        beamGeo.translate(0, -25, 0);
+        const beamMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.3 });
+        const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+        armGroup.add(beamMesh);
+
+        // Center pivot pin
+        const pinGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16);
+        const pinMesh = new THREE.Mesh(pinGeo, brassMat);
+        pinMesh.rotation.z = Math.PI / 2;
+        arcGroup.add(pinMesh);
+
+
+        // --- The Sun ---
+        const sunDistance = 80;
+        const sunGeo = new THREE.SphereGeometry(3, 32, 32);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMaterial);
+        scene.add(sunMesh);
+
+        // Glow
+        const glowGeo = new THREE.SphereGeometry(4.5, 32, 32);
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
+        const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+        sunMesh.add(glowMesh);
+
+
+        // --- Observer Model (Scale reference) ---
+        const observerGroup = new THREE.Group();
+        observerGroup.position.set(-5, 0, 3);
+        scene.add(observerGroup);
+        
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.7 }); // Blue clothes
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xfcd34d, roughness: 0.5 });
+        
+        // Body (1.4m)
+        const bodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 16);
+        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+        bodyMesh.position.y = 0.7;
+        bodyMesh.castShadow = true;
+        observerGroup.add(bodyMesh);
+        
+        // Head (0.3m)
+        const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
+        const headMesh = new THREE.Mesh(headGeo, skinMat);
+        headMesh.position.y = 1.55;
+        headMesh.castShadow = true;
+        observerGroup.add(headMesh);
+
+
+        // ==========================================
+        // 4. MAIN UPDATE & RENDER LOOP
+        // ==========================================
+        const clock = new THREE.Clock();
+
+        function updateAstronomy() {
+            calculateAstronomy();
+            updateUI();
+
+            // Only show sun and beam if above horizon
+            const isVisible = state.sunAlt > -0.5; // Slight buffer below horizon for sunrise/set effect
+            sunMesh.visible = isVisible;
+            beamMesh.visible = isVisible && state.sunAlt > 0;
+            sunLight.intensity = isVisible ? Math.max(0, Math.min(1.5, state.sunAlt / 10)) : 0; // Fade intensity
+
+            if (isVisible) {
+                const altRad = state.sunAlt * Math.PI / 180;
+                // Azimuth in Three.js coordinates (-Z is North, +X is East)
+                // SunAz = 0 means North. 
+                const azRad = state.sunAz * Math.PI / 180;
+
+                // Set Sun Position
+                const sx = sunDistance * Math.cos(altRad) * Math.sin(azRad);
+                const sy = sunDistance * Math.sin(altRad);
+                const sz = -sunDistance * Math.cos(altRad) * Math.cos(azRad); // -Z is North
+                
+                sunMesh.position.set(sx, sy, sz);
+                sunLight.position.set(sx, sy, sz);
+
+                if (state.sunAlt > 0) {
+                    // Rotate Tracker Base to face Sun Azimuth
+                    // Since arc is mounted along Z axis locally, facing Azimuth means local Z points at Sun Azimuth
+                    trackerBase.rotation.y = -azRad; 
+                    
+                    // Rotate Arm to point at Sun Altitude
+                    // Arm default points down (-Y). We want it to rotate up by Altitude.
+                    // Rotation around X axis.
+                    armGroup.rotation.x = altRad;
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+
+            if (state.isPlaying) {
+                state.timeHours += delta * state.animSpeed;
+                if (state.timeHours >= 24) {
+                    state.timeHours = 0;
+                    // Advance one day
+                    state.date.setDate(state.date.getDate() + 1);
+                    ui.dateInput.valueAsDate = state.date;
+                }
+                ui.timeSlider.value = state.timeHours;
+                ui.timeDisplay.innerText = formatTime(state.timeHours);
+                updateAstronomy();
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize Now
+        ui.btnNow.click(); 
+        
+        // Start Loop
+        animate();
+
+    </script>
+</body>
+</html>
