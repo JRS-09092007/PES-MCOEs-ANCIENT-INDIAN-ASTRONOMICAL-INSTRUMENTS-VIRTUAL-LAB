@@ -1,0 +1,23 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "ANCIENT INDIAN ASTRONOMICAL INSTRUMENTS VIRTUAL LAB",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JRS-09092007/PES-MCOEs-ANCIENT-INDIAN-ASTRONOMICAL-INSTRUMENTS-VIRTUAL-LAB.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JRS-09092007/PES-MCOEs-ANCIENT-INDIAN-ASTRONOMICAL-INSTRUMENTS-VIRTUAL-LAB/issues"
+  },
+  "homepage": "https://github.com/JRS-09092007/PES-MCOEs-ANCIENT-INDIAN-ASTRONOMICAL-INSTRUMENTS-VIRTUAL-LAB#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
