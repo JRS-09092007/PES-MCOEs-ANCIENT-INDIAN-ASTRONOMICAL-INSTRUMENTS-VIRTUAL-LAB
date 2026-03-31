@@ -154,9 +154,9 @@ h1 {
 <h1>🚀 Ancient Indian Astronomical Instruments Virtual Lab</h1>
 
 <div class="dashboard">
-    <div>Time: <span id="time"></span></div>
-    <div>Azimuth: <span id="azimuth"></span></div>
-    <div>Altitude: <span id="altitude"></span></div>
+    <div>Time: <span id="time"></span></div>
+    <div>Azimuth: <span id="azimuth"></span></div>
+    <div>Altitude: <span id="altitude"></span></div>
 </div>
 
 <div id="sun"></div>
@@ -201,23 +201,23 @@ const lon = 73.8567;
 
 /* TIME + SUN POSITION */
 function updateSun() {
-    let now = new Date();
-    document.getElementById("time").innerText = now.toLocaleTimeString();
+    let now = new Date();
+    document.getElementById("time").innerText = now.toLocaleTimeString();
 
-    let hours = now.getHours() + now.getMinutes()/60;
+    let hours = now.getHours() + now.getMinutes()/60;
 
-    let azimuth = (hours / 24) * 360;
-    let altitude = Math.sin(hours/24 * Math.PI) * 90;
+    let azimuth = (hours / 24) * 360;
+    let altitude = Math.sin(hours/24 * Math.PI) * 90;
 
-    document.getElementById("azimuth").innerText = azimuth.toFixed(2);
-    document.getElementById("altitude").innerText = altitude.toFixed(2);
+    document.getElementById("azimuth").innerText = azimuth.toFixed(2);
+    document.getElementById("altitude").innerText = altitude.toFixed(2);
 
-    let x = (azimuth/360)*window.innerWidth;
-    let y = window.innerHeight - (altitude/90)*400;
+    let x = (azimuth/360)*window.innerWidth;
+    let y = window.innerHeight - (altitude/90)*400;
 
-    let sun = document.getElementById("sun");
-    sun.style.left = x + "px";
-    sun.style.top = y + "px";
+    let sun = document.getElementById("sun");
+    sun.style.left = x + "px";
+    sun.style.top = y + "px";
 }
 setInterval(updateSun,1000);
 
@@ -227,19 +227,19 @@ let data = [];
 let labels = [];
 
 let chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'Sun Altitude',
-            data: data,
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Sun Altitude',
+            data: data,
             borderColor: 'cyan',
             backgroundColor: 'rgba(0, 255, 255, 0.1)',
             borderWidth: 1.5,
             fill: true,
             pointRadius: 2
-        }]
-    },
+        }]
+    },
     options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -254,48 +254,48 @@ let chart = new Chart(ctx, {
 });
 
 setInterval(()=>{
-    let t = new Date().toLocaleTimeString();
-    let alt = document.getElementById("altitude").innerText;
+    let t = new Date().toLocaleTimeString();
+    let alt = document.getElementById("altitude").innerText;
 
-    labels.push(t);
-    data.push(alt);
+    labels.push(t);
+    data.push(alt);
 
-    if(labels.length>10){labels.shift();data.shift();}
-    chart.update();
+    if(labels.length>10){labels.shift();data.shift();}
+    chart.update();
 },2000);
 
 /* 🛰️ PLANETS */
 function orbit(){
-    let t = Date.now()/1000;
+    let t = Date.now()/1000;
 
-    document.getElementById("earth").style.left = 300 + Math.cos(t)*100 + "px";
-    document.getElementById("earth").style.top = 300 + Math.sin(t)*100 + "px";
+    document.getElementById("earth").style.left = 300 + Math.cos(t)*100 + "px";
+    document.getElementById("earth").style.top = 300 + Math.sin(t)*100 + "px";
 
-    document.getElementById("mars").style.left = 300 + Math.cos(t*0.7)*150 + "px";
-    document.getElementById("mars").style.top = 300 + Math.sin(t*0.7)*150 + "px";
+    document.getElementById("mars").style.left = 300 + Math.cos(t*0.7)*150 + "px";
+    document.getElementById("mars").style.top = 300 + Math.sin(t*0.7)*150 + "px";
 }
 setInterval(orbit,50);
 
 /* 🎙️ JARVIS */
 function speak(msg){
-    let speech = new SpeechSynthesisUtterance(msg);
-    speech.lang="en-US";
-    window.speechSynthesis.speak(speech);
+    let speech = new SpeechSynthesisUtterance(msg);
+    speech.lang="en-US";
+    window.speechSynthesis.speak(speech);
 }
 
 function startJarvis(){
-    let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    rec.start();
+    let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.start();
 
-    rec.onresult = (e)=>{
-        let cmd = e.results[0][0].transcript.toLowerCase();
+    rec.onresult = (e)=>{
+        let cmd = e.results[0][0].transcript.toLowerCase();
 
-        speak("Opening " + cmd);
+        speak("Opening " + cmd);
 
-        if(cmd.includes("samrat")) openPage('samrat_yantra.html');
-        if(cmd.includes("ram")) openPage('ram_yantra.html');
-        if(cmd.includes("jai")) openPage('jai_prakash_yantra.html');
-    };
+        if(cmd.includes("samrat")) openPage('samrat_yantra.html');
+        if(cmd.includes("ram")) openPage('ram_yantra.html');
+        if(cmd.includes("jai")) openPage('jai_prakash_yantra.html');
+    };
 }
 
 /* NAV */
