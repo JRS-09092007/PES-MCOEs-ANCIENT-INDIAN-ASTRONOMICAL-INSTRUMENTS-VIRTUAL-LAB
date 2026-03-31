@@ -3,69 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ancient Indian Astronomical Instruments Virtual Lab </title>
+<title>Ancient Indian Astronomical Instruments Virtual Lab</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
     margin: 0;
-    font-family: 'Segoe UI';
-    background: radial-gradient(circle, #020617, #000);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(circle, #17038e, #1800ad);
     color: cyan;
     overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* STARFIELD */
 canvas#stars {
     position: fixed;
-    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
 }
 
 /* HEADER */
 h1 {
     text-align: center;
-    padding: 15px;
+    padding: 10px;
+    margin: 5px 0;
+    font-size: 1.5rem;
+    z-index: 1;
 }
 
 /* DASHBOARD */
 .dashboard {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 40px;
     padding: 10px;
     background: rgba(0,255,255,0.05);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    font-weight: bold;
+    z-index: 1;
 }
 
 /* SUN */
 #sun {
     position: absolute;
-    width: 70px;
-    height: 70px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: radial-gradient(circle, yellow, orange);
-    box-shadow: 0 0 40px orange;
+    box-shadow: 0 0 30px orange;
+    z-index: -1;
 }
 
 /* COMPASS */
 #compass {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    width: 120px;
-    height: 120px;
+    bottom: 15px;
+    left: 15px;
+    width: 70px;
+    height: 70px;
     border: 2px solid cyan;
     border-radius: 50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    font-size: 24px;
+    z-index: 10;
 }
 
-/* GRID */
+/* GRAPH WRAPPER (Keeps graph compact) */
+.graph-container {
+    width: 100%;
+    max-width: 800px;
+    height: 120px;
+    margin: 10px auto;
+    padding: 0 15px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+/* GRID (Configured for 4 columns to fit single screen) */
 .container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-    gap: 20px;
-    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    z-index: 1;
 }
 
 .card {
@@ -73,18 +106,44 @@ h1 {
     border: 1px solid cyan;
     border-radius: 10px;
     cursor: pointer;
+    width: calc(25% - 12px); /* 4 Columns */
+    min-width: 160px;
+    max-width: 220px;
+    text-align: center;
+    padding-bottom: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,255,255,0.3);
 }
 
 .card img {
     width: 100%;
-    height: 150px;
+    height: 90px; /* Reduced to fit screen */
     object-fit: cover;
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+}
+
+.card h3 {
+    margin: 8px 0 0 0;
+    font-size: 14px;
 }
 
 /* PLANETS */
 .planet {
     position: absolute;
     border-radius: 50%;
+    z-index: -1;
+}
+
+@media (max-width: 800px) {
+    .card { width: calc(33.33% - 12px); } /* 3 cols on tablet */
+}
+@media (max-width: 500px) {
+    .card { width: calc(50% - 12px); } /* 2 cols on mobile */
 }
 
 </style>
@@ -102,11 +161,13 @@ h1 {
     <div>Altitude: <span id="altitude"></span></div>
 </div>
 
+<div class="graph-container">
+    <canvas id="graph"></canvas>
+</div>
+
 <div id="sun"></div>
 
 <div id="compass">🧭</div>
-
-<canvas id="graph" height="100"></canvas>
 
 <!-- PLANETS -->
 <div class="planet" id="earth" style="width:20px;height:20px;background:blue;"></div>
@@ -114,26 +175,33 @@ h1 {
 
 <div class="container">
 
-<div class="card" onclick="openPage('samrat_yantra.html')">
-<img src="samrat_yantra.png"><h3>Samrat</h3></div>
+    <div class="card" onclick="openPage('samrat_yantra.html')">
+        <img src="samrat_yantra.png"><h3>Samrat</h3>
+    </div>
 
-<div class="card" onclick="openPage('jai_prakash_yantra.html')">
-<img src="jai_prakash_yantra.png"><h3>Jai Prakash</h3></div>
+    <div class="card" onclick="openPage('jai_prakash_yantra.html')">
+        <img src="jai_prakash_yantra.png"><h3>Jai Prakash</h3>
+    </div>
 
-<div class="card" onclick="openPage('ram_yantra.html')">
-<img src="ram_yantra.png"><h3>Ram</h3></div>
+    <div class="card" onclick="openPage('ram_yantra.html')">
+        <img src="ram_yantra.png"><h3>Ram</h3>
+    </div>
 
-<div class="card" onclick="openPage('nadivalaya_yantra.html')">
-<img src="nadivalaya_yantra.png"><h3>Nadivalaya</h3></div>
+    <div class="card" onclick="openPage('nadivalaya_yantra.html')">
+        <img src="nadivalaya_yantra.png"><h3>Nadivalaya</h3>
+    </div>
 
-<div class="card" onclick="openPage('dakshinottar_bhitti_yantra.html')">
-<img src="dakshinottar_bhitti_yantra.png"><h3>Dakshinottar</h3></div>
+    <div class="card" onclick="openPage('dakshinottar_bhitti_yantra.html')">
+        <img src="dakshinottar_bhitti_yantra.png"><h3>Dakshinottar</h3>
+    </div>
 
-<div class="card" onclick="openPage('digamsa_yantra.html')">
-<img src="digamsa_yantra.png"><h3>Digamsa</h3></div>
+    <div class="card" onclick="openPage('digamsa_yantra.html')">
+        <img src="digamsa_yantra.png"><h3>Digamsa</h3>
+    </div>
 
-<div class="card" onclick="openPage('shasthamsa_yantra.html')">
-<img src="shasthamsa_Yantra.png"><h3>Shasthamsa</h3></div>
+    <div class="card" onclick="openPage('shasthamsa_yantra.html')">
+        <img src="shasthamsa_Yantra.png"><h3>Shasthamsa</h3>
+    </div>
 
 </div>
 
@@ -175,8 +243,24 @@ let chart = new Chart(ctx, {
         labels: labels,
         datasets: [{
             label: 'Sun Altitude',
-            data: data
+            data: data,
+            borderColor: 'cyan',
+            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+            borderWidth: 1.5,
+            fill: true,
+            pointRadius: 2
         }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false, /* Allows it to fit the 120px height container */
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: { ticks: { color: 'cyan' }, grid: { color: 'rgba(0,255,255,0.1)' } },
+            y: { ticks: { color: 'cyan' }, grid: { color: 'rgba(0,255,255,0.1)' } }
+        }
     }
 });
 
